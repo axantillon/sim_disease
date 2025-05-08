@@ -47,9 +47,8 @@ def determine_daily_status(
             - The updated last_status_update_day (which will be current_day if updated).
     """
     if current_day == last_status_update_day:
-        return existing_status, last_status_update_day # Status already up-to-date for today
+        return existing_status, last_status_update_day 
 
-    # It's a new day, or first time, so update the statuses
     new_daily_status: Dict[int, bool] = {}
     infection_params = config.get('infection_model', {}).get('infection_parameters', {})
     p_becomes_superspreader = infection_params.get('p_becomes_superspreader', 0.01) # Default if not in config

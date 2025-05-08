@@ -7,14 +7,13 @@ simulation over a networked population.
 """
 import networkx as nx
 import numpy as np
-from typing import Dict, Any, List, Set # Added Set
-import logging # Added for logging
+from typing import Dict, Any, List, Set
+import logging
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
 
-from src.graph_setup import create_population_graph # Adjusted import path assuming src is on PYTHONPATH or relative
-# Import model-specific functions
+from src.graph_setup import create_population_graph
 from src.models import independent as independent_model
 from src.models import dependent as dependent_model
 from src.models import superspreader as superspreader_model
@@ -34,127 +33,138 @@ class Simulation:
         self.config = config
         self.graph = create_population_graph(config)
         self.current_day = 0
-        # Initialize results structure - stores daily counts for now
         self.results: Dict[str, List[Any]] = {
             'day': [],
             'susceptible': [],
             'infected': [],
             'recovered': [],
-            'newly_infected_today': [] # Added to track daily new infections
+            'newly_infected_today': []
         }
-        # Ensure newly_infected_today also has an entry for day 0
-        self.results['newly_infected_today'].append(0) # Assume 0 newly infected on Day 0 itself
-        self.record_stats() # Record initial state (Day 0)
+        self.results['newly_infected_today'].append(0) # Day 0 has 0 new infections
 
-        # For superspreader model state management
-        self.daily_superspreader_status: Dict[int, bool] = {} 
-        self.last_superspreader_status_update_day: int = -1
+        self.last_superspreader_status_update_day = -1
+        self.daily_superspreader_status_map: Dict[int, bool] = {}
+
+        self._record_initial_state() 
 
     def run(self):
         """Runs the simulation for the configured number of days."""
-        logger.info(f"Starting simulation for {self.config['number_of_days']} days...") # Changed print to logger.info
-        for day in range(1, self.config['number_of_days'] + 1): # Start from Day 1
+        num_days = self.config.get('number_of_days', 100)
+        logger.info(f"Starting simulation: {self.config.get('simulation_name', 'Unnamed Simulation')}")
+        logger.info(f"Total days: {num_days}, Population size: {self.config.get('population_size')}")
+
+        for day in range(1, num_days + 1): 
             self.step()
-            if day % 10 == 0: # Optional progress update
-                 logger.info(f"--- Day {day} completed ---") # Changed print to logger.info
-        logger.info("Simulation finished.") # Changed print to logger.info
+
+        logger.info("Simulation finished.")
 
     def step(self):
-        """Executes one time step (day) of the simulation."""
-        if self.current_day >= self.config['number_of_days']:
-            return
+        """Advances the simulation by one day."""
+        self.current_day += 1
 
-        newly_infected_today: Set[int] = set()
-        newly_recovered_today: Set[int] = set()
-
-        model_config = self.config.get('infection_model', {})
-        model_type = model_config.get('type', 'independent')
-        # Get recovery duration from config, default to 14 days
-        recovery_duration_from_config = model_config.get('recovery_duration', 14) 
+        recovery_duration = self.config.get('recovery_duration_days', 14)
+        newly_infected_today_count = 0 
 
         # --- Daily Superspreader Status Update (if model is superspreader_dynamic) ---
+        infection_model_config = self.config.get('infection_model', {})
+        model_type = infection_model_config.get('type', 'independent') # Default to 'independent'
+
         if model_type == "superspreader_dynamic":
-            self.daily_superspreader_status, self.last_superspreader_status_update_day = \
+            self.daily_superspreader_status_map, self.last_superspreader_status_update_day = \
                 superspreader_model.determine_daily_status(
                     self.graph, 
                     self.config, 
                     self.current_day, 
                     self.last_superspreader_status_update_day, 
-                    self.daily_superspreader_status
+                    self.daily_superspreader_status_map
                 )
         # --- End Daily Superspreader Status Update ---
 
-        susceptible_nodes: List[int] = [] 
-        for node_id, data in self.graph.nodes(data=True):
-            if data.get('infection_state') == 'susceptible': # Use .get() for safety
-                susceptible_nodes.append(node_id)
-            elif data.get('infection_state') == 'infected':
-                # Process recovery for infected nodes
+        # --- Recovery Process ---
+        for node_id, data in list(self.graph.nodes(data=True)):
+            if data.get('infection_state') == 'infected':
                 data['days_infected'] = data.get('days_infected', 0) + 1
-                # Use recovery_duration from the main simulation config
-                if data['days_infected'] >= recovery_duration_from_config:
-                    newly_recovered_today.add(node_id)
+                if data['days_infected'] >= recovery_duration:
+                    self.graph.nodes[node_id]['infection_state'] = 'recovered'
 
-        for susceptible_node_id in susceptible_nodes:
-            prob_infection_today = 0.0
-            has_infected_neighbor = any(
-                self.graph.nodes[neighbor_id].get('infection_state') == 'infected' 
-                for neighbor_id in self.graph.neighbors(susceptible_node_id)
-            )
+        # --- Infection Process ---
+        newly_infected_nodes: Set[int] = set() 
 
-            if has_infected_neighbor:
-                if model_type == "independent":
-                    prob_infection_today = independent_model.calculate_probability(
-                        self.graph, susceptible_node_id, self.config
-                    )
-                elif model_type == "dependent": 
-                    prob_infection_today = dependent_model.calculate_probability(
-                        self.graph, susceptible_node_id, self.config
-                    )
-                elif model_type == "superspreader_dynamic":
-                    prob_infection_today = superspreader_model.calculate_probability(
-                        self.graph, susceptible_node_id, self.config, self.daily_superspreader_status
-                    )
-                else:
-                    # Fallback to independent if model type is unrecognized or not implemented
-                    logger.warning(f"Warning: Unknown or unimplemented infection model type '{model_type}'. Defaulting to 'independent'.") # Changed print to logger.warning
-                    prob_infection_today = independent_model.calculate_probability(
-                        self.graph, susceptible_node_id, self.config
-                    )
+        # Pre-calculate daily superspreader status if using the dynamic model
 
-            if np.random.rand() < prob_infection_today:
-                newly_infected_today.add(susceptible_node_id)
+        # --- Calculate New Infections ---
+        for node_id, data in self.graph.nodes(data=True):
+            if data.get('infection_state') == 'susceptible': 
+                prob_infection_today = 0.0
+                has_infected_neighbor = any(
+                    self.graph.nodes[neighbor_id].get('infection_state') == 'infected' 
+                    for neighbor_id in self.graph.neighbors(node_id)
+                )
 
-        # Update states
-        for node_id in newly_infected_today:
+                if has_infected_neighbor:
+                    if model_type == "independent":
+                        prob_infection_today = independent_model.calculate_probability(
+                            self.graph, node_id, self.config
+                        )
+                    elif model_type == "dependent": 
+                        prob_infection_today = dependent_model.calculate_probability(
+                            self.graph, node_id, self.config
+                        )
+                    elif model_type == "superspreader_dynamic":
+                        prob_infection_today = superspreader_model.calculate_probability(
+                            self.graph, node_id, self.config, self.daily_superspreader_status_map
+                        )
+                    else:
+                        logger.error(f"Invalid or missing infection model type: {model_type}")
+                        # Potentially fall back to a default model or raise an error
+                        # For now, effectively disables infection if model is unknown.
+                        pass 
+
+                if np.random.rand() < prob_infection_today:
+                    newly_infected_nodes.add(node_id)
+
+        self.results['newly_infected_today'].append(len(newly_infected_nodes))
+
+        # --- Update States for Newly Infected ---
+        for node_id in newly_infected_nodes:
             self.graph.nodes[node_id]['infection_state'] = 'infected'
             self.graph.nodes[node_id]['days_infected'] = 0 # Reset days infected count
 
-        for node_id in newly_recovered_today:
-            self.graph.nodes[node_id]['infection_state'] = 'recovered'
+        # --- Record Daily Counts ---
+        self._update_daily_counts()
 
-        self.current_day += 1
-        self.results['newly_infected_today'].append(len(newly_infected_today)) # Store count for this day
-        self.record_stats()
+    def _record_initial_state(self):
+        """Records the initial state of the simulation (Day 0)."""
+        s_count, i_count, r_count = 0, 0, 0
+        for node_id, data in self.graph.nodes(data=True):
+            if data['infection_state'] == 'susceptible':
+                s_count += 1
+            elif data['infection_state'] == 'infected':
+                i_count += 1
+            elif data['infection_state'] == 'recovered':
+                r_count += 1
+        
+        self.results['day'].append(0)
+        self.results['susceptible'].append(s_count)
+        self.results['infected'].append(i_count)
+        self.results['recovered'].append(r_count)
+        # 'newly_infected_today' for day 0 is already set to 0 in __init__
 
-    def record_stats(self):
-        """Records the current state of the simulation (counts of S, I, R)."""
-        susceptible_count = 0
-        infected_count = 0
-        recovered_count = 0
-        for node_id in self.graph.nodes():
-            state = self.graph.nodes[node_id].get('infection_state')
-            if state == 'susceptible':
-                susceptible_count += 1
-            elif state == 'infected':
-                infected_count += 1
-            elif state == 'recovered':
-                recovered_count += 1
-
+    def _update_daily_counts(self):
+        """Updates the daily counts for the current day."""
+        s_count, i_count, r_count = 0, 0, 0
+        for node_id, data in self.graph.nodes(data=True):
+            if data['infection_state'] == 'susceptible':
+                s_count += 1
+            elif data['infection_state'] == 'infected':
+                i_count += 1
+            elif data['infection_state'] == 'recovered':
+                r_count += 1
+        
         self.results['day'].append(self.current_day)
-        self.results['susceptible'].append(susceptible_count)
-        self.results['infected'].append(infected_count)
-        self.results['recovered'].append(recovered_count)
+        self.results['susceptible'].append(s_count)
+        self.results['infected'].append(i_count)
+        self.results['recovered'].append(r_count)
 
     def get_results(self) -> Dict[str, List]:
         """Returns the simulation results."""

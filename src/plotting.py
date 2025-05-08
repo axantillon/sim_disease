@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 from pathlib import Path
-from typing import Dict, List, Any, Union
+from typing import Dict, List, Any, Optional
 import logging
 
 # Configure logger for this module
@@ -98,21 +98,14 @@ def extract_summary_metrics(results_data: List[Dict[str, int]], config: Dict[str
         # This fallback calculates Total Ever Infected as: (Population at Day 0) - (Final Susceptible Count).
         # This is equivalent to I_0 + (S_0 - S_final) for a standard SIR model where S->I->R.
         # It relies on data from the DataFrame itself, which is more robust if config population is missing/zero.
-        logger.warning(
-            "'newly_infected_today' column missing in results data. "
-            "Using fallback calculation for 'total_ever_infected'."
-        )
-        s_day_0 = df.loc[df['day'] == 0, 'susceptible'].iloc[0]
-        i_day_0 = df.loc[df['day'] == 0, 'infected'].iloc[0]
-        r_day_0 = df.loc[df['day'] == 0, 'recovered'].iloc[0]
-        population_at_day_0_from_df = s_day_0 + i_day_0 + r_day_0
-        
-        final_susceptible = df['susceptible'].iloc[-1]
-        
-        metrics['total_ever_infected'] = population_at_day_0_from_df - final_susceptible
+        population_day_0 = df['susceptible'].iloc[0] + df['infected'].iloc[0] + df['recovered'].iloc[0]
+        metrics['total_ever_infected'] = population_day_0 - df['susceptible'].iloc[-1]
+
+    metrics['peak_infected_count'] = df['infected'].max() if not df.empty else 0
+    peak_day_series = df[df['infected'] == metrics['peak_infected_count']].index
+    metrics['days_to_peak'] = peak_day_series[0] if not peak_day_series.empty else 0
 
     metrics['final_susceptible_count'] = df['susceptible'].iloc[-1] if not df.empty else population_size_from_config
-    # metrics['final_recovered_count'] = df['recovered'].iloc[-1] if not df.empty else 0
     return metrics
 
 
@@ -135,41 +128,38 @@ def plot_summary_metrics_bars(summary_metrics_list: List[Dict[str, Any]],
         logger.warning("No summary metrics to plot.")
         return
 
-    # Ensure sim_names are assigned to the metrics before creating DataFrame if not already present
-    # This step is usually done in main.py before calling this function.
-    # df_metrics = pd.DataFrame(summary_metrics_list, index=sim_names) 
-    # Let's assume 'simulation_name' is a key in each dict in summary_metrics_list
-    df_metrics = pd.DataFrame(summary_metrics_list)
-    if 'simulation_name' not in df_metrics.columns and sim_names and len(sim_names) == len(df_metrics):
-        df_metrics['simulation_name'] = sim_names 
-    
+    # Ensure sim_names are provided and match the length of summary_metrics_list
+    if not sim_names or len(sim_names) != len(summary_metrics_list):
+        logger.warning("Simulation names not provided or mismatch length with metrics list. Using default indexing for plot.")
+        # Fallback: use default names or ensure 'simulation_name' key exists in metrics
+        df_metrics = pd.DataFrame(summary_metrics_list)
+    else:
+        # Check if 'simulation_name' is already a key in the dictionaries
+        if all('simulation_name' in m for m in summary_metrics_list):
+            df_metrics = pd.DataFrame(summary_metrics_list)
+            if not pd.Series(sim_names).equals(df_metrics['simulation_name']): # if provided sim_names differ from internal, warn or prioritize?
+                logger.debug("Provided sim_names differ from 'simulation_name' key in metrics; using internal 'simulation_name'.")
+        else: # 'simulation_name' is not in the dicts, so use sim_names as index
+            for i, metric_dict in enumerate(summary_metrics_list):
+                metric_dict['simulation_name'] = sim_names[i] # Add sim_name to each dict
+            df_metrics = pd.DataFrame(summary_metrics_list)
+
     if 'simulation_name' in df_metrics.columns:
         df_metrics.set_index('simulation_name', inplace=True)
     else:
-        # Fallback if simulation_name is somehow missing, use provided sim_names if lengths match
-        if sim_names and len(sim_names) == len(df_metrics):
-            df_metrics.index = sim_names
-        else:
-            logger.warning("Warning: Cannot set simulation names as index for summary metrics plot.")
-            # Proceed with default numerical index if names are problematic
+        logger.warning("Could not set 'simulation_name' as index.")
+        # Proceed with default numerical index if names are problematic
 
-    # Select only the metrics we want to plot
     metrics_to_plot = [
         'peak_infected_count',
         'days_to_peak',
         'total_ever_infected',
         'final_susceptible_count'
     ]
-    # Filter out metrics not present in the DataFrame to avoid KeyErrors
-    plottable_metrics = [metric for metric in metrics_to_plot if metric in df_metrics.columns]
-    df_plot = df_metrics[plottable_metrics]
+    plot_df = df_metrics[[col for col in metrics_to_plot if col in df_metrics.columns]].copy()
 
-    if df_plot.empty:
-        logger.warning("No data available for the selected metrics to plot.")
-        return
-
-    num_metrics = len(df_plot.columns)
-    num_simulations = len(df_plot.index)
+    num_metrics = len(plot_df.columns)
+    num_simulations = len(plot_df.index)
 
     fig, ax = plt.subplots(figsize=(max(10, num_simulations * num_metrics * 0.5), 7))
     
@@ -179,9 +169,9 @@ def plot_summary_metrics_bars(summary_metrics_list: List[Dict[str, Any]],
         'total_ever_infected': 'Total Infected',
         'final_susceptible_count': 'Final Susceptible'
     }
-    df_plot = df_plot.rename(columns=metric_name_map)
+    plot_df = plot_df.rename(columns=metric_name_map)
 
-    df_plot.plot(kind='bar', ax=ax, width=0.8)
+    plot_df.plot(kind='bar', ax=ax, width=0.8)
 
     ax.set_xlabel("Configuration Scenario")
     ax.set_ylabel("Metric Value")

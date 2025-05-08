@@ -37,25 +37,17 @@ def calculate_probability(graph: nx.Graph, susceptible_node_id: int, config: Dic
 
     k = infected_neighbor_count
     infection_params = config.get('infection_model', {}).get('infection_parameters', {})
-    alpha = infection_params.get('alpha', 0.1)  # Default alpha if not specified
-    beta = infection_params.get('beta', 0.3)    # Default beta if not specified
+    alpha = infection_params.get('alpha', 0.1)  # Steepness of the sigmoid
+    beta = infection_params.get('beta', 3)    # Shift of the sigmoid
 
-    # Calculate sigmoid probability
+    exponent_val = -alpha * k + beta
+    # Sticking to the existing formula's behavior.
     try:
-        # Original logic: sigmoid_prob = 1 / (1 + math.exp(-alpha * k + beta))
-        # This means a higher 'beta' increases probability for k=0, and shifts curve left.
-        # A more standard sigmoid increasing with k might be 1 / (1 + math.exp(-(alpha * k - beta)))
-        # Sticking to the existing formula's behavior.
-        exponent_val = -alpha * k + beta 
         sigmoid_prob = 1 / (1 + math.exp(exponent_val))
     except OverflowError:
         # If exponent_val is very large positive, exp() overflows, sigmoid_prob approaches 0.
         # If exponent_val is very large negative, exp() approaches 0, sigmoid_prob approaches 1.
-        if exponent_val > 0: # Likely means exp() overflowed
-            sigmoid_prob = 0.0
-        else: # Likely means exp() underflowed (approached 0)
-            sigmoid_prob = 1.0
+        sigmoid_prob = 0.0 if exponent_val > 0 else 1.0
             
-    # Adjust based on immunity and vaccine effectiveness
     final_prob_infection = sigmoid_prob * (1 - immune_level) * (1 - vaccine_effectiveness)
     return max(0.0, min(1.0, final_prob_infection)) # Ensure probability is bounded
