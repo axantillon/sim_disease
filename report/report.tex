@@ -11,6 +11,7 @@
 \usepackage{listings} % For embedding code snippets
 \usepackage{xcolor}   % For coloring in listings
 \usepackage{hyperref}
+\usepackage{xurl} % For better URL line breaking
 \hypersetup{
     colorlinks=true,
     linkcolor=black,
@@ -18,7 +19,8 @@
     citecolor=black,
     filecolor=black,
     anchorcolor=black,
-    linktocpage=true
+    linktocpage=true,
+    breaklinks=true % Added to allow URL line breaking
 }
 \usepackage{hypcap} % Should be loaded after hyperref for correct anchor placement
 
@@ -30,6 +32,7 @@
 \begin{document}
 
 \maketitle
+\vspace{-2\baselineskip} % Reduce space after title block
 \tableofcontents
 \newpage
 
@@ -332,5 +335,17 @@ The project is organized as follows:
 \end{itemize}
 
 A more detailed visual representation of the project structure (ASCII tree) can be found in the project's \texttt{README.md} file.
+
+\section*{References}
+\begin{itemize}
+    \item The Python Software Foundation. \textit{Python Language Reference, version 3.x}. Available at \url{https://docs.python.org/}
+    \item Hagberg, A. A., Schult, D. A., \& Swart, P. J. (2008). Exploring network structure, dynamics, and function using NetworkX. In G. Varoquaux, T. Vaught, \& J. Millman (Eds.), \textit{Proceedings of the 7th Python in Science Conference (SciPy2008)} (pp. 11-15). Pasadena, CA USA. Available at \url{https://networkx.org/}
+    \item The \texttt{jsonschema} developers. \textit{jsonschema documentation}. Retrieved from \url{https://python-jsonschema.readthedocs.io/}
+    \item Erdős, P., \& Rényi, A. (1959). On Random Graphs I. \textit{Publicationes Mathematicae Debrecen}, 6, 290-297. Available at \url{https://static.renyi.hu/~p_erdos/1959-11.pdf}
+    \item Erdős, P., \& Rényi, A. (1960). On the evolution of random graphs. \textit{Magyar Tudományos Akadémia Matematikai Kutató Intézetének Közleményei}, 5, 17-61. Available at \url{https://www.renyi.hu/~p_erdos/1960-10.pdf}
+    \item Barabási, A.-L., \& Albert, R. (1999). Emergence of scaling in random networks. \textit{Science}, 286(5439), 509-512. Preprint available at \url{https://arxiv.org/abs/cond-mat/9910332}
+    \item Watts, D. J., \& Strogatz, S. H. (1998). Collective dynamics of ‘small-world’ networks. \textit{Nature}, 393(6684), 440-442. Available at \url{https://www.nature.com/articles/30918}
+    \item Kermack, W. O., \& McKendrick, A. G. (1927). A contribution to the mathematical theory of epidemics. \textit{Proceedings of the Royal Society A: Mathematical, Physical and Engineering Sciences}, 115(772), 700-721. Available at \url{https://royalsocietypublishing.org/doi/10.1098/rspa.1927.0118}
+\end{itemize}
 
 \end{document}
