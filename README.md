@@ -63,9 +63,9 @@ Follow these steps to set up and run the simulation environment.
 
 Run a basic simulation to ensure everything is working:
 ```bash
-python main.py configs/exp1_foundations/exp1_low_density_low_initial.json
+python main.py configs/exp1_foundations/
 ```
-This should create an output directory (e.g., `results/exp1_low_density_low_initial/`) with plots and a CSV file.
+This should create an output directory (e.g., `results/exp1_foundations/`) with plots and a CSV file.
 
 ## Running Simulations
 
