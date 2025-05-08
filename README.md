@@ -50,7 +50,7 @@ Follow these steps to set up and run the simulation environment.
     Navigate to the project root directory (where `pyproject.toml` is located) and run:
     ```bash
     uv venv  # Creates a .venv directory
-    uv pip sync  # Installs dependencies from pyproject.toml into the .venv
+    uv sync  # Installs dependencies from pyproject.toml into the .venv
     ```
 
 4.  **Activate the Virtual Environment:**
