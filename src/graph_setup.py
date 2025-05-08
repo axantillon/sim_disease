@@ -1,3 +1,11 @@
+"""
+Handles the creation and initialization of the population graph.
+
+This module provides functions to generate different types of graphs
+(e.g., Erdos-Renyi, Barabasi-Albert, Watts-Strogatz) and to initialize
+node attributes (like immune level, vaccine effectiveness, initial infection state)
+and edge attributes (like contact chance) based on simulation configurations.
+"""
 import networkx as nx
 import numpy as np
 from typing import Dict, Any
@@ -52,7 +60,9 @@ def create_population_graph(config: Dict[str, Any]) -> nx.Graph:
         k = int(connection_param)
         if k % 2 != 0 or k >= n or k < 2:
             raise ValueError(f"For Watts-Strogatz graph, 'connections' (k) must be an even integer >= 2 and < population_size. Got {k}")
-        graph = nx.watts_strogatz_graph(n=n, k=k, p=0.1)
+        # Get rewire_probability from config, default to 0.1
+        rewire_prob = config.get('rewire_probability', 0.1) 
+        graph = nx.watts_strogatz_graph(n=n, k=k, p=rewire_prob)
     else:
         raise ValueError(f"Unsupported graph_type: {graph_type}. Supported types are 'erdos_renyi', 'barabasi_albert', 'watts_strogatz'.")
 

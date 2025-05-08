@@ -1,3 +1,10 @@
+"""
+Main entry point for the disease simulation project.
+
+This script handles command-line argument parsing, loading of simulation
+configurations, running single or multiple simulations, and generating
+output plots and summary data.
+"""
 import argparse
 import json
 from pathlib import Path

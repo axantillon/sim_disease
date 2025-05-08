@@ -184,6 +184,8 @@ The `configs/` directory contains subdirectories, each representing an experimen
 *   **[Experiment 1: Foundations](./configs/exp1_foundations/README.md)**: Initial conditions and network reach.
 *   **[Experiment 2: Individual Heterogeneity](./configs/exp2_heterogeneity/README.md)**: Probabilistic defense mechanisms.
 *   **[Experiment 3: Core Transmission Mechanisms](./configs/exp3_core_mechanisms/README.md)**: Independent vs. cumulative risk.
+*   **[Experiment 4: Superspreader Phenomenon](./configs/exp4_superspreader_phenomenon/README.md)**: Exploring the impact of superspreading events.
+*   **[Experiment 5: Model Showdown](./configs/exp5_model_showdown/README.md)**: Comparing all implemented infection models.
 *   **[Experiment A: Network Topology](./configs/exp_A_network_topology/README.md)**: Impact of Erdos-Renyi, Barabasi-Albert, and Watts-Strogatz graph structures.
 
 ## Project Structure
@@ -194,6 +196,8 @@ The `configs/` directory contains subdirectories, each representing an experimen
 │   ├── exp1_foundations/
 │   ├── exp2_heterogeneity/
 │   ├── exp3_core_mechanisms/
+│   ├── exp4_superspreader_phenomenon/
+│   ├── exp5_model_showdown/
 │   └── exp_A_network_topology/
 ├── results/                # Default output directory for simulation results
 ├── src/                    # Source code

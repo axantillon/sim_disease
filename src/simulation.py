@@ -1,8 +1,17 @@
+"""
+Core simulation logic for the disease spread model.
+
+This module defines the `Simulation` class, which manages the setup,
+execution (step-by-step), and results collection of a disease spread
+simulation over a networked population.
+"""
 import networkx as nx
 import numpy as np
-import math # For exp in sigmoid, though now in models.dependent
-import random # Though now primarily in models.superspreader
 from typing import Dict, Any, List, Set # Added Set
+import logging # Added for logging
+
+# Configure logger for this module
+logger = logging.getLogger(__name__)
 
 from src.graph_setup import create_population_graph # Adjusted import path assuming src is on PYTHONPATH or relative
 # Import model-specific functions
@@ -43,12 +52,12 @@ class Simulation:
 
     def run(self):
         """Runs the simulation for the configured number of days."""
-        print(f"Starting simulation for {self.config['number_of_days']} days...")
+        logger.info(f"Starting simulation for {self.config['number_of_days']} days...") # Changed print to logger.info
         for day in range(1, self.config['number_of_days'] + 1): # Start from Day 1
             self.step()
             if day % 10 == 0: # Optional progress update
-                 print(f"--- Day {day} completed ---")
-        print("Simulation finished.")
+                 logger.info(f"--- Day {day} completed ---") # Changed print to logger.info
+        logger.info("Simulation finished.") # Changed print to logger.info
 
     def step(self):
         """Executes one time step (day) of the simulation."""
@@ -58,7 +67,10 @@ class Simulation:
         newly_infected_today: Set[int] = set()
         newly_recovered_today: Set[int] = set()
 
-        model_type = self.config.get('infection_model', {}).get('type', 'independent')
+        model_config = self.config.get('infection_model', {})
+        model_type = model_config.get('type', 'independent')
+        # Get recovery duration from config, default to 14 days
+        recovery_duration_from_config = model_config.get('recovery_duration', 14) 
 
         # --- Daily Superspreader Status Update (if model is superspreader_dynamic) ---
         if model_type == "superspreader_dynamic":
@@ -79,7 +91,8 @@ class Simulation:
             elif data.get('infection_state') == 'infected':
                 # Process recovery for infected nodes
                 data['days_infected'] = data.get('days_infected', 0) + 1
-                if data['days_infected'] >= data.get('recovery_duration', float('inf')):
+                # Use recovery_duration from the main simulation config
+                if data['days_infected'] >= recovery_duration_from_config:
                     newly_recovered_today.add(node_id)
 
         for susceptible_node_id in susceptible_nodes:
@@ -104,7 +117,7 @@ class Simulation:
                     )
                 else:
                     # Fallback to independent if model type is unrecognized or not implemented
-                    print(f"Warning: Unknown or unimplemented infection model type '{model_type}'. Defaulting to 'independent'.")
+                    logger.warning(f"Warning: Unknown or unimplemented infection model type '{model_type}'. Defaulting to 'independent'.") # Changed print to logger.warning
                     prob_infection_today = independent_model.calculate_probability(
                         self.graph, susceptible_node_id, self.config
                     )
@@ -116,8 +129,6 @@ class Simulation:
         for node_id in newly_infected_today:
             self.graph.nodes[node_id]['infection_state'] = 'infected'
             self.graph.nodes[node_id]['days_infected'] = 0 # Reset days infected count
-            # Symptomatic day calculation could also be reset/initialized here if needed
-            # For now, assuming 'days_until_symptomatic' is set at graph creation and doesn't change
 
         for node_id in newly_recovered_today:
             self.graph.nodes[node_id]['infection_state'] = 'recovered'

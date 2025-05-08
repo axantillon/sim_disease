@@ -1,3 +1,23 @@
+"""
+Implements the 'superspreader_dynamic' infection probability model.
+
+This model simulates scenarios where infected individuals can temporarily become
+superspreaders, significantly increasing their infectivity. It consists of two main parts:
+1. Daily Status Determination: Each infected individual has a daily probability
+   of becoming a superspreader.
+2. Probability Calculation: The chance of a susceptible individual getting infected
+   depends on whether their infected neighbors are currently superspreaders.
+   Superspreaders have their base infectivity amplified by a multiplier.
+
+Parameters (from config):
+- `p_becomes_superspreader`: Daily chance an infected person becomes a superspreader.
+- `normal_base_infectivity`: Base infectivity for non-superspreaders.
+- `superspreader_multiplier`: Factor by which `normal_base_infectivity` is multiplied
+  for superspreaders.
+
+The model also accounts for the susceptible individual's immune level and
+vaccine effectiveness.
+"""
 import networkx as nx
 import random
 from typing import Dict, Any, Tuple

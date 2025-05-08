@@ -1,3 +1,15 @@
+"""
+Implements the 'dependent' (sigmoid-based) infection probability model.
+
+In this model, the probability of a susceptible individual getting infected depends
+on the *number* of its infected neighbors. This relationship is modeled using a
+sigmoid function, where the probability increases as the count of infected
+neighbors rises.
+
+The sigmoid function's shape is controlled by 'alpha' (steepness) and 'beta'
+(shift) parameters from the configuration. The resulting probability is then
+adjusted by the susceptible individual's immune level and vaccine effectiveness.
+"""
 import networkx as nx
 import math
 from typing import Dict, Any

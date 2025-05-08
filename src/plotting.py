@@ -1,9 +1,21 @@
+"""
+Handles the generation of plots and extraction of summary metrics from simulation data.
+
+This module provides functions to:
+- Plot infection curves over time for one or more simulations.
+- Extract key summary statistics (e.g., peak infected, total infected) from results.
+- Plot grouped bar charts comparing summary metrics across multiple simulations.
+"""
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import seaborn as sns
 from pathlib import Path
 from typing import Dict, List, Any, Union
+import logging
+
+# Configure logger for this module
+logger = logging.getLogger(__name__)
 
 def plot_infection_curves(all_results: List[Dict[str, List[Any]]], 
                           sim_names: List[str], 
@@ -40,7 +52,7 @@ def plot_infection_curves(all_results: List[Dict[str, List[Any]]],
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     plt.savefig(output_path, format='pdf', dpi=300, bbox_inches='tight')
-    print(f"Infection curve plot saved to {output_path}")
+    logger.info(f"Infection curve plot saved to {output_path}")
     plt.close()
 
 
@@ -82,13 +94,22 @@ def extract_summary_metrics(results_data: List[Dict[str, int]], config: Dict[str
     # If 'newly_infected_today' column exists and is accurate (includes day 0 as 0)
     if 'newly_infected_today' in df.columns:
         metrics['total_ever_infected'] = df['newly_infected_today'].sum()
-    else: # Fallback: calculate based on change in susceptible (less robust if R can go to S)
-        initial_susceptible = df.loc[df['day'] == 0, 'susceptible'].iloc[0] if not df.empty else population_size_from_config
-        final_susceptible = df['susceptible'].iloc[-1] if not df.empty else population_size_from_config
-        metrics['total_ever_infected'] = initial_susceptible - final_susceptible + (population_size_from_config - initial_susceptible) # S_0 - S_final + I_0
-        # This fallback needs to consider initial infected count for accuracy.
-        # For now, assuming 'newly_infected_today' is the primary source.
-        # A more robust fallback: initial_infected_count + sum of positive changes in 'infected' or 'recovered'
+    else: # Fallback: if 'newly_infected_today' column is missing.
+        # This fallback calculates Total Ever Infected as: (Population at Day 0) - (Final Susceptible Count).
+        # This is equivalent to I_0 + (S_0 - S_final) for a standard SIR model where S->I->R.
+        # It relies on data from the DataFrame itself, which is more robust if config population is missing/zero.
+        logger.warning(
+            "'newly_infected_today' column missing in results data. "
+            "Using fallback calculation for 'total_ever_infected'."
+        )
+        s_day_0 = df.loc[df['day'] == 0, 'susceptible'].iloc[0]
+        i_day_0 = df.loc[df['day'] == 0, 'infected'].iloc[0]
+        r_day_0 = df.loc[df['day'] == 0, 'recovered'].iloc[0]
+        population_at_day_0_from_df = s_day_0 + i_day_0 + r_day_0
+        
+        final_susceptible = df['susceptible'].iloc[-1]
+        
+        metrics['total_ever_infected'] = population_at_day_0_from_df - final_susceptible
 
     metrics['final_susceptible_count'] = df['susceptible'].iloc[-1] if not df.empty else population_size_from_config
     # metrics['final_recovered_count'] = df['recovered'].iloc[-1] if not df.empty else 0
@@ -111,7 +132,7 @@ def plot_summary_metrics_bars(summary_metrics_list: List[Dict[str, Any]],
         comparison_name: The name of the experiment suite/comparison.
     """
     if not summary_metrics_list:
-        print("No summary metrics to plot.")
+        logger.warning("No summary metrics to plot.")
         return
 
     # Ensure sim_names are assigned to the metrics before creating DataFrame if not already present
@@ -129,7 +150,7 @@ def plot_summary_metrics_bars(summary_metrics_list: List[Dict[str, Any]],
         if sim_names and len(sim_names) == len(df_metrics):
             df_metrics.index = sim_names
         else:
-            print("Warning: Cannot set simulation names as index for summary metrics plot.")
+            logger.warning("Warning: Cannot set simulation names as index for summary metrics plot.")
             # Proceed with default numerical index if names are problematic
 
     # Select only the metrics we want to plot
@@ -144,7 +165,7 @@ def plot_summary_metrics_bars(summary_metrics_list: List[Dict[str, Any]],
     df_plot = df_metrics[plottable_metrics]
 
     if df_plot.empty:
-        print("No data available for the selected metrics to plot.")
+        logger.warning("No data available for the selected metrics to plot.")
         return
 
     num_metrics = len(df_plot.columns)
@@ -173,5 +194,5 @@ def plot_summary_metrics_bars(summary_metrics_list: List[Dict[str, Any]],
     output_filename = Path(f"{base_filename}_grouped_summary.pdf")
     output_filename.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(output_filename, format='pdf', dpi=300, bbox_inches='tight')
-    print(f"Consolidated summary metrics bar plot saved to {output_filename}")
+    logger.info(f"Consolidated summary metrics bar plot saved to {output_filename}")
     plt.close(fig)

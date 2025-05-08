@@ -1,3 +1,15 @@
+"""
+Implements the 'independent' infection probability model.
+
+In this model, each infected neighbor of a susceptible individual contributes an
+independent chance of transmitting the disease. The overall probability of infection
+for the susceptible individual is calculated based on the probability of *not* being
+infected by any single one of its infected neighbors.
+
+The transmission probability from a single infected neighbor is influenced by a base
+transmission probability (config) and the susceptible individual's immune level
+and vaccine effectiveness.
+"""
 import networkx as nx
 from typing import Dict, Any
 

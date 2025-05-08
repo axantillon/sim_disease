@@ -1,7 +1,18 @@
+"""
+Handles loading and validation of simulation configuration files.
+
+This module defines the JSON schema for simulation configurations and provides
+a function to load a configuration file, validate it against the schema,
+and return the configuration as a dictionary.
+"""
 import json
 from pathlib import Path
 from typing import Dict, Any
 import jsonschema # New import
+import logging # Added for logging
+
+# Configure logger for this module
+logger = logging.getLogger(__name__)
 
 # Schema for validating the simulation configuration files
 SIMULATION_CONFIG_SCHEMA = {
@@ -123,6 +134,12 @@ SIMULATION_CONFIG_SCHEMA = {
         "description": "Specifies the graph generation model to be used.",
         "enum": ["erdos_renyi", "barabasi_albert", "watts_strogatz"],
         "default": "erdos_renyi" # Optional: Explicitly state default, though graph_setup handles it
+    },
+    "rewire_probability": {   # Added for Watts-Strogatz
+        "type": "number",
+        "description": "The probability of rewiring each edge in the Watts-Strogatz graph model. Only used if graph_type is 'watts_strogatz'. Defaults to 0.1 in graph_setup.py if not provided.",
+        "minimum": 0.0,
+        "maximum": 1.0
     }
   },
   "required": [
@@ -163,7 +180,7 @@ def load_config(filepath: str | Path) -> Dict[str, Any]:
 
     try:
         jsonschema.validate(instance=config_data, schema=SIMULATION_CONFIG_SCHEMA)
-        print(f"Configuration from '{filepath}' loaded and validated successfully.")
+        logger.info(f"Configuration from '{filepath}' loaded and validated successfully.") # Changed print to logger.info
         return config_data
     except jsonschema.exceptions.ValidationError as e:
         error_message = f"Configuration file '{filepath}' is invalid.\n"
