@@ -1,0 +1,4 @@
+simulation_name,population_size_cfg,peak_infected_count,peak_infected_percentage,days_to_peak,total_ever_infected,final_susceptible_count
+"High Avg Defense, Low Variance",1000,19,1.9,100,17,981
+"Low Avg Defense, Low Variance",1000,1000,100.0,80,998,0
+"Medium Avg Defense, High Variance",1000,975,97.5,100,973,25

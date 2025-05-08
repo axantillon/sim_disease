@@ -1,0 +1,5 @@
+simulation_name,population_size_cfg,peak_infected_count,peak_infected_percentage,days_to_peak,total_ever_infected,final_susceptible_count
+Superspreader - Baseline,1000,1000,100.0,48,995,0
+"Superspreader - High Chance, High Impact",1000,1000,100.0,50,996,0
+"Superspreader - Low Chance, High Impact",1000,1000,100.0,61,993,0
+"Superspreader - Low Chance, Low Impact",1000,999,99.9,91,995,1

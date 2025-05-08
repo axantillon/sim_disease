@@ -1,0 +1,4 @@
+simulation_name,population_size_cfg,peak_infected_count,peak_infected_percentage,days_to_peak,total_ever_infected,final_susceptible_count
+Dependent Model - Moderate Baseline,1000,1000,100.0,16,994,0
+Independent Model - Baseline,1000,1000,100.0,66,993,0
+Superspreader Model - Baseline,1000,1000,100.0,80,991,0

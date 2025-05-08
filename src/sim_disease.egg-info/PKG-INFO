@@ -1,0 +1,191 @@
+Metadata-Version: 2.4
+Name: sim_disease
+Version: 0.1.0
+Summary: Simulation of infectious disease spread on a network.
+License-Expression: MIT
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: networkx>=3.0
+Requires-Dist: numpy>=1.20
+Requires-Dist: matplotlib>=3.5
+Requires-Dist: seaborn>=0.12
+Requires-Dist: pandas>=1.3
+Requires-Dist: jsonschema>=4.0
+Requires-Dist: pydantic>=2.11.4
+
+# Disease Spread Simulation: Exploring Discrete Probability
+
+## 1. Project Goal
+
+This project simulates the spread of a disease through a networked population. The primary focus is **not** on creating a highly realistic epidemiological model, but rather on using the simulation framework as a tool to **explore and demonstrate various discrete probability concepts**. We investigate how different probabilistic assumptions for infection transmission, individual heterogeneity, and network structure influence the overall dynamics of the spread.
+
+## 2. Core Simulation Mechanics
+
+*   **Population Network:** Individuals in the population are represented as nodes in a graph (using `networkx`). The default graph model is **Erdos-Renyi**, defined by `population_size` (number of nodes) and `connections` (probability of an edge between any two nodes). This is handled in `src/graph_setup.py`.
+*   **Individual Attributes:** Each individual has attributes that influence their susceptibility and infectivity, sampled from probability distributions:
+    *   `immune_level`: Base resistance to infection (0.0 to 1.0).
+    *   `vaccine_effectiveness`: Reduction in susceptibility due to vaccination (0.0 to 1.0).
+    *   `contact_chance` (edge attribute): Baseline probability of effective contact along an edge. **Note:** While this attribute is defined and initialized on graph edges in `src/graph_setup.py`, it is **not currently used** by any of the infection models in `src/models/` for calculating transmission probability.
+    These are configured under `individual_parameters` in the JSON config files, specifying `mu` (mean) and `sigma` (standard deviation) for their distributions.
+*   **Time Steps:** The simulation proceeds in discrete daily time steps, configured by `number_of_days`.
+*   **SIR Model:** Individuals transition between states: 'susceptible', 'infected', and 'recovered'.
+    *   Susceptible individuals can become infected.
+    *   Infected individuals recover after a specified `recovery_duration`. This duration is configured under the `infection_model` settings in the JSON configuration files (e.g., `infection_model.recovery_duration`) and defaults to 14 days if not specified in the config. The simulation tracks `days_infected` for each individual to determine recovery.
+
+## 3. Modular Infection Models
+
+The simulation supports different infection models, implemented as interchangeable modules in the `src/models/` directory. This allows for direct comparison of their underlying probabilistic assumptions. The choice of model is specified in the configuration file under `infection_model.type`.
+
+1.  **Independent Model (`src/models/independent.py`)**
+    *   **Concept:** Each infected neighbor of a susceptible individual presents an independent chance (Bernoulli trial) of transmitting the disease.
+    *   **Probability (from one neighbor):** `P_neighbor = base_prob_transmission * (1 - immune_level_susceptible) * (1 - vaccine_effectiveness_susceptible)`.
+    *   **Overall (from any neighbor):** `P_infection = 1 - Π(1 - P_neighbor_i)` for all infected neighbors `i`.
+    *   **Key Config:** `infection_model.infection_parameters.base_prob_transmission` (default: 0.05).
+
+2.  **Dependent Model (`src/models/dependent.py`)**
+    *   **Concept:** The risk of infection for a susceptible individual is a non-linear function (sigmoid) of the *number* of their infected neighbors (`k`).
+    *   **Probability:** `P_infection = sigmoid_base * (1 - immune_level_susceptible) * (1 - vaccine_effectiveness_susceptible)`,
+        where `sigmoid_base = 1 / (1 + exp(-alpha * k + beta))`.
+    *   **Parameters:**
+        *   `alpha` (config: `infection_model.infection_parameters.alpha`, default: 0.1): Controls the steepness of the sigmoid curve. Higher values make the transition sharper.
+        *   `beta` (config: `infection_model.infection_parameters.beta`, default: 0.3): Shifts the sigmoid curve. In this formulation, a higher `beta` increases the baseline probability (when `k=0`) and effectively lowers the number of infected neighbors needed for a high infection probability.
+
+3.  **Superspreader Dynamic Model (`src/models/superspreader.py`)**
+    *   **Concept:** Inspired by events like COVID-19 superspreading. Infected individuals have a daily probability of temporarily becoming a superspreader, significantly increasing their infectivity.
+    *   **Daily Status:** Each infected individual has a `p_becomes_superspreader` chance each day to become a superspreader for that day.
+    *   **Infectivity:** If an infected neighbor is a superspreader, their infectivity is `normal_base_infectivity * superspreader_multiplier`. Otherwise, it's `normal_base_infectivity`.
+    *   **Overall Probability (from any neighbor):** Calculated similarly to the Independent Model, but using the potentially modified infectivity for each neighbor: `P_infection = 1 - Π(1 - P_neighbor_i)`.
+    *   **Key Config (`infection_model.infection_parameters`):**
+        *   `p_becomes_superspreader` (default: 0.01)
+        *   `normal_base_infectivity` (default: 0.05)
+        *   `superspreader_multiplier` (default: 10.0)
+
+## 4. Experimental Suites (Consolidated)
+
+Simulations are organized into focused experimental suites, each exploring specific discrete probability concepts. Each suite has its own directory within `configs/` containing a detailed `README.md` and JSON configuration files.
+
+1.  **[Experiment 1: Foundations - Initial Conditions & Network Reach](./configs/exp1_foundations/README.md)**
+2.  **[Experiment 2: Individual Heterogeneity & Probabilistic Defense](./configs/exp2_heterogeneity/README.md)**
+3.  **[Experiment 3: Core Transmission Mechanisms - Independent Events vs. Cumulative Risk](./configs/exp3_core_mechanisms/README.md)**
+4.  **[Experiment 4: The "Superspreader" Phenomenon - Rare Events, Large Impact](./configs/exp4_superspreader_phenomenon/README.md)**
+5.  **[Experiment 5: Unified Model Showdown - How Different Probabilistic Assumptions Compare](./configs/exp5_model_showdown/README.md)**
+
+(Refer to the `README.md` files within each experiment's directory for specific details on their focus and configurations.)
+
+## 5. Configuration
+
+Simulations are configured using JSON files, typically located in subdirectories within `configs/`. Key parameters include:
+
+*   `simulation_name` (string): A descriptive name for the simulation run. Used for naming output files.
+*   `population_size` (int): Total number of individuals in the network.
+*   `connections` (float): Probability of an edge between any two nodes (for Erdos-Renyi graphs).
+*   `graph_type` (string): Specifies the graph generation model (e.g., `"erdos_renyi"`).
+*   `initial_binomial_probability` (float): Probability that any given individual is infected at the start of the simulation (Day 0).
+*   `number_of_days` (int): Duration of the simulation in days.
+*   `individual_parameters` (dict): Contains `mu` (mean) and `sigma` (standard deviation) for sampling individual attributes:
+    *   `immune_level`
+    *   `vaccine_effectiveness`
+    *   `contact_chance` (Note: Defined but not currently used by infection models for probability calculation).
+*   `infection_model` (dict): Specifies the infection model and its parameters:
+    *   `type` (string): e.g., `"independent"`, `"dependent"`, `"superspreader_dynamic"`.
+    *   `recovery_duration` (integer, optional): Number of days an individual remains infected before recovering. Defaults to 14 if not specified in the config.
+    *   `infection_parameters` (dict): Parameters specific to the chosen model type (see Section 3 for details).
+
+## 6. Running Simulations & Analyzing Results
+
+Simulations are run using the `main.py` script located in the project's root directory.
+
+*   **Running a Single Simulation:**
+    Provide the path to a single JSON configuration file.
+    ```bash
+    python main.py configs/exp1_foundations/exp1_low_density_low_initial.json
+    ```
+*   **Running a Suite of Simulations:**
+    Provide the path to a directory containing multiple `.json` configuration files. `main.py` will run each one.
+    ```bash
+    python main.py configs/exp1_foundations/
+    ```
+*   **Output:**
+    *   The script creates an `results/` directory (if it doesn't exist) in the project root.
+    *   For each simulation or suite, comparative plots are generated:
+        *   `{comparison_name}_all_curves.png`: Shows susceptible and infected counts over time for all simulations in the run.
+        *   `{comparison_name}_summary_{metric}.pdf`: Bar plots for key summary metrics (e.g., peak infected, total ever infected).
+    *   A `{comparison_name}_summary_metrics.csv` file is saved, containing key metrics and configuration parameters for each simulation run.
+    *   The `comparison_name` defaults to the input configuration file's stem (for single runs) or the directory name (for suites), or can be specified with the `--comparison_name` argument.
+*   **Custom Output Directory:**
+    Use the `--output_dir` argument to specify a different location for results.
+    ```bash
+    python main.py configs/exp1_foundations/exp1_low_density_low_initial.json --output_dir custom_results/
+    ```
+
+## 7. Project Structure
+
+```
+.sim_disease/
+├── configs/                # Simulation configuration files (JSON) and experimental suite READMEs
+│   ├── exp1_foundations/
+│   ├── exp2_heterogeneity/
+│   ├── ... (etc.)
+├── results/                # Default output directory for simulation results (plots, CSVs)
+├── src/                    # Source code for the simulation
+│   ├── __init__.py
+│   ├── config.py           # Configuration loading utility
+│   ├── simulation.py       # Main Simulation class (SIR model, daily steps)
+│   ├── graph_setup.py      # Population graph generation and attribute initialization
+│   ├── models/             # Infection model implementations
+│   │   ├── __init__.py
+│   │   ├── independent.py
+│   │   ├── dependent.py
+│   │   └── superspreader.py
+│   └── plotting.py         # Functions for generating plots and extracting summary metrics
+├── .gitignore
+├── LICENSE
+├── main.py                 # Main script to run simulations and generate outputs
+├── PLAN.md                 # Project planning document
+├── README.md               # This file
+└── pyproject.toml        # Project dependencies and build configuration
+```
+
+## 8. Dependencies and Setup
+
+The project dependencies are managed in `pyproject.toml` and include:
+
+*   `numpy`
+*   `networkx`
+*   `matplotlib`
+*   `pandas`
+*   `seaborn`
+*   `jsonschema`
+
+**Setup using `uv`:**
+
+It is recommended to use `uv` for fast environment creation and package installation.
+
+1.  **Install `uv`** (if you haven't already):
+    Refer to the official `uv` installation guide: [https://github.com/astral-sh/uv#installation](https://github.com/astral-sh/uv#installation)
+    ```bash
+    # Example installation, check official docs for the latest
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    ```
+2.  **Create a virtual environment and install dependencies:**
+    Navigate to the project root directory (where `pyproject.toml` is located) and run:
+    ```bash
+    uv venv  # Creates a .venv directory
+    uv pip sync  # Installs dependencies from pyproject.toml into the .venv
+    ```
+3.  **Activate the virtual environment:**
+    ```bash
+    source .venv/bin/activate
+    ```
+    (On Windows, use `.venv\Scripts\activate`)
+
+After activation, you can run the simulation scripts as described in "6. Running Simulations & Analyzing Results".
+
+## 9. Future Work
+
+*   Explicitly model recovery duration and immunity waning (SIRS dynamics).
+*   Explore other graph generation models (e.g., Barabasi-Albert for scale-free networks, Watts-Strogatz for small-world networks).
+*   Incorporate the `contact_chance` edge attribute into infection probability calculations for relevant models.
+*   More sophisticated analysis and visualization tools (e.g., network visualizations of spread).
+*   Introduce agent-based behaviors or spatial components.
+*   Develop a more comprehensive test suite.

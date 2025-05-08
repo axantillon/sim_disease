@@ -1,0 +1,21 @@
+{
+  "simulation_name": "Superspreader - Baseline",
+  "population_size": 1000,
+  "connections": 0.01,
+  "graph_type": "erdos_renyi",
+  "initial_binomial_probability": 0.005,
+  "number_of_days": 100,
+  "individual_parameters": {
+    "immune_level": {"mu": 0.3, "sigma": 0.1},
+    "vaccine_effectiveness": {"mu": 0.0, "sigma": 0.0},
+    "contact_chance": {"mu": 0.05, "sigma": 0.01}
+  },
+  "infection_model": {
+    "type": "superspreader_dynamic",
+    "infection_parameters": {
+      "p_becomes_superspreader": 0.01,
+      "normal_base_infectivity": 0.05,
+      "superspreader_multiplier": 10.0
+    }
+  }
+}

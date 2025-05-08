@@ -1,0 +1,4 @@
+simulation_name,population_size_cfg,peak_infected_count,peak_infected_percentage,days_to_peak,total_ever_infected,final_susceptible_count
+"High Density, Medium Initial",1000,1000,100.0,24,995,0
+"Low Density, Low Initial",1000,983,98.3,100,981,17
+"Medium Density, High Initial",1000,1000,100.0,52,993,0

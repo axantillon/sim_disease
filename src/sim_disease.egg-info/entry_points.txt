@@ -1,0 +1,2 @@
+[console_scripts]
+run_simulation = sim_disease.main:main

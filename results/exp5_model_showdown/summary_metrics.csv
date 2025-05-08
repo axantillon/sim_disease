@@ -1,0 +1,4 @@
+simulation_name,population_size_cfg,peak_infected_count,peak_infected_percentage,days_to_peak,total_ever_infected,final_susceptible_count
+Model Showdown - Dependent,1000,1000,100.0,36,992,0
+Model Showdown - Independent,1000,1000,100.0,59,994,0
+Model Showdown - Superspreader,1000,1000,100.0,44,992,0

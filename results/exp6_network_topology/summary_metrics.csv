@@ -1,0 +1,4 @@
+simulation_name,population_size_cfg,peak_infected_count,peak_infected_percentage,days_to_peak,total_ever_infected,final_susceptible_count
+Network Topology - Barabasi-Albert,1000,1000,100.0,78,999,0
+Network Topology - Erdos-Renyi,1000,1000,100.0,85,993,0
+Network Topology - Watts-Strogatz,1000,1000,100.0,52,992,0
