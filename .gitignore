@@ -5,3 +5,34 @@ __pycache__
 *.log
 *.out
 *.toc
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+dist/
+*.egg
+*.whl
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDE / Editor specific
+.idea/
+.vscode/
+*.swp
+*~
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Test & Coverage
+.coverage
+.pytest_cache/
+htmlcov/
