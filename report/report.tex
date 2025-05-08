@@ -82,7 +82,7 @@ where $\alpha$ and $\beta$ are parameters controlling the steepness and shift of
 This model captures a threshold effect, where the risk of infection increases sharply once a certain number of infected neighbors is reached, simulating scenarios where social clustering or repeated exposure significantly amplifies risk beyond a linear accumulation.
 
 \subsection{Superspreader Dynamic Infection Model}
-The Superspreader Dynamic Infection Model is implemented in \texttt{src/models/super\-spreader.py}.
+The Superspreader Dynamic Infection Model draws its inspiration from phenomena observed during the COVID-19 pan\-dem\-ic. In such events, certain in\-di\-vid\-u\-als, often termed 'su\-per\-spread\-ers,' were identified as being responsible for a dis\-pro\-por\-tion\-ate\-ly high number of secondary infections. This model is implemented in \texttt{src/models/super\-spreader.py}.
 \subsubsection{Mechanism}
 This model builds on the Independent Infection Model but introduces the concept of superspreaders—individuals with significantly higher infectivity. Each infected individual has a daily probability of becoming a superspreader. If designated as a superspreader for that day, their base infectivity is multiplied by a configurable factor, making them more likely to infect their neighbors.
 \subsubsection{Implications}
@@ -248,7 +248,7 @@ Superspreader - Low Chance, Low Impact & 1000 & 999 & 99.9 & 91 & 995 & 1 \\
 \end{table}
 
 \subsubsection*{Discussion of Results}
-This suite explored the 'Superspreader Dynamic' model's parameters. The baseline superspreader scenario peaked at 48 days. Increasing both the chance and impact of superspreading events ('High Chance, High Impact') led to a similar peak time of 50 days. Reducing these factors, particularly the impact ('Low Chance, Low Impact'), significantly slowed the epidemic, peaking at 91 days and achieving 99.9\% infection. This demonstrates that while superspreading generally leads to rapid spread, its severity and speed are sensitive to the specific parameters governing event frequency and intensity.
+This suite explored the 'Superspreader Dynamic' model's parameters. The model itself draws inspiration from real-world epidemics like COVID-19, where a small fraction of infected individuals can cause a disproportionately large number of secondary infections. The baseline superspreader scenario peaked at 48 days. Increasing both the chance and impact of superspreading events ('High Chance, High Impact') led to a similar peak time of 50 days. Reducing these factors, particularly the impact ('Low Chance, Low Impact'), significantly slowed the epidemic, peaking at 91 days and achieving 99.9\% infection. This demonstrates that while superspreading generally leads to rapid spread, its severity and speed are sensitive to the specific parameters governing event frequency and intensity.
 
 \subsection[Exp Suite 5: Model Showdown]{Experiment Suite 5: Model Showdown (\texttt{exp5\_mod\-el\_show\-down})}
 This suite provides a direct comparison of the three infection models using a consistent set of baseline parameters for population, network, and individual attributes, allowing for observation of differences purely due to model mechanics. \begin{figure}[htbp!] \centering \begin{subfigure}{.48\textwidth} \centering \includegraphics[width=\linewidth]{../results/exp5\_model\_showdown/infection\_curves.pdf} 
